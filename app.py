@@ -6,42 +6,51 @@ import plotly.express as px
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import os
 
-# Show current working directory & files for debugging (ඒක පසුව ඉවත් කරන්න)
-st.write("Current working directory:", os.getcwd())
-st.write("Files here:", os.listdir())
-if os.path.exists("data"):
-    st.write("Files in data folder:", os.listdir("data"))
-
-# Load model and scaler
+# =======================
+# Load Model & Scaler
+# =======================
 @st.cache_resource
 def load_model():
-    model = joblib.load("model.pkl")  # path එක හරියට දීලා තියෙනවාද බලන්න
-    scaler = joblib.load("scaler.pkl")
+    model_path = "model.pkl"
+    scaler_path = "scaler.pkl"
+
+    if not os.path.isfile(model_path) or not os.path.isfile(scaler_path):
+        st.error(f"❌ Missing model or scaler file!\nMake sure '{model_path}' and '{scaler_path}' are present.")
+        return None, None
+
+    model = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
     return model, scaler
 
 model, scaler = load_model()
 
-# Load dataset
+# =======================
+# Load Dataset
+# =======================
 @st.cache_data
 def load_data():
-    # "data/diabetes.csv" ගොනුව එතැන තියෙන බවට විශ්වාසයක් නම්
     csv_path = "data/diabetes.csv"
     if not os.path.isfile(csv_path):
-        st.error(f"CSV file not found at path: {csv_path}")
-        return pd.DataFrame()  # empty df return කරන්න error handle කරන්න
+        st.error(f"❌ CSV file not found at path: {csv_path}")
+        return pd.DataFrame()
     return pd.read_csv(csv_path)
 
 df = load_data()
 
-# Sidebar navigation
+# =======================
+# Sidebar Navigation
+# =======================
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Home", "Data Exploration", "Visualisations", "Predict", "Model Performance"])
 
+# =======================
+# Pages
+# =======================
 if page == "Home":
     st.title("Diabetes Prediction App")
     st.markdown("""
     This app predicts the likelihood of diabetes based on patient health data.
-    Dataset: Pima Indians Diabetes Dataset.
+    Dataset: **Pima Indians Diabetes Dataset**
     """)
 
 elif page == "Data Exploration":
@@ -75,30 +84,35 @@ elif page == "Visualisations":
 elif page == "Predict":
     st.header("Make a Prediction")
 
-    pregnancies = st.slider("Pregnancies", 0, 20, 1)
-    glucose = st.slider("Glucose", 0, 200, 100)
-    bp = st.slider("Blood Pressure", 0, 122, 70)
-    skin = st.slider("Skin Thickness", 0, 99, 20)
-    insulin = st.slider("Insulin", 0, 846, 79)
-    bmi = st.slider("BMI", 0.0, 67.0, 20.0)
-    dpf = st.slider("Diabetes Pedigree Function", 0.0, 2.5, 0.5)
-    age = st.slider("Age", 21, 81, 33)
+    if model is None or scaler is None:
+        st.warning("⚠ Model and scaler not loaded. Please check files.")
+    else:
+        pregnancies = st.slider("Pregnancies", 0, 20, 1)
+        glucose = st.slider("Glucose", 0, 200, 100)
+        bp = st.slider("Blood Pressure", 0, 122, 70)
+        skin = st.slider("Skin Thickness", 0, 99, 20)
+        insulin = st.slider("Insulin", 0, 846, 79)
+        bmi = st.slider("BMI", 0.0, 67.0, 20.0)
+        dpf = st.slider("Diabetes Pedigree Function", 0.0, 2.5, 0.5)
+        age = st.slider("Age", 21, 81, 33)
 
-    features = np.array([[pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]])
-    scaled_features = scaler.transform(features)
+        features = np.array([[pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]])
+        scaled_features = scaler.transform(features)
 
-    if st.button("Predict"):
-        prediction = model.predict(scaled_features)[0]
-        probability = model.predict_proba(scaled_features)[0][prediction]
-        if prediction == 1:
-            st.error(f"Prediction: Diabetes (Confidence: {probability:.2f})")
-        else:
-            st.success(f"Prediction: No Diabetes (Confidence: {probability:.2f})")
+        if st.button("Predict"):
+            prediction = model.predict(scaled_features)[0]
+            probability = model.predict_proba(scaled_features)[0][prediction]
+            if prediction == 1:
+                st.error(f"Prediction: Diabetes (Confidence: {probability:.2f})")
+            else:
+                st.success(f"Prediction: No Diabetes (Confidence: {probability:.2f})")
 
 elif page == "Model Performance":
     st.header("Model Performance")
     if df.empty:
         st.warning("Dataset not loaded.")
+    elif model is None or scaler is None:
+        st.warning("⚠ Model and scaler not loaded.")
     else:
         X = df.drop("Outcome", axis=1)
         y = df["Outcome"]
@@ -106,7 +120,7 @@ elif page == "Model Performance":
         preds = model.predict(X_scaled)
 
         acc = accuracy_score(y, preds)
-        st.write(f"Accuracy: {acc:.4f}")
+        st.write(f"Accuracy: **{acc:.4f}**")
 
         cm = confusion_matrix(y, preds)
         st.write("Confusion Matrix:")
@@ -115,4 +129,5 @@ elif page == "Model Performance":
         st.write("Classification Report:")
         report = classification_report(y, preds, output_dict=True)
         st.dataframe(pd.DataFrame(report).transpose())
+
 
