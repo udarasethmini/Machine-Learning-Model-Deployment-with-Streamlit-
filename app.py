@@ -115,3 +115,4 @@ elif page == "Model Performance":
         st.write("Classification Report:")
         report = classification_report(y, preds, output_dict=True)
         st.dataframe(pd.DataFrame(report).transpose())
+
