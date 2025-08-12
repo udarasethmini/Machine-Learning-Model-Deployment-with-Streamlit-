@@ -17,7 +17,8 @@ model, scaler = load_model()
 # Load dataset
 @st.cache_data
 def load_data():
-    return pd.read_csv("data/diabetes.csv")
+    # Try adjust path if needed here
+    return pd.read_csv("data/diabetes.csv")  # <-- Change path here if file location different
 
 df = load_data()
 
@@ -25,9 +26,6 @@ df = load_data()
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Home", "Data Exploration", "Visualisations", "Predict", "Model Performance"])
 
-# -------------------
-# HOME PAGE
-# -------------------
 if page == "Home":
     st.title("Diabetes Prediction App")
     st.markdown("""
@@ -35,9 +33,6 @@ if page == "Home":
     Dataset: Pima Indians Diabetes Dataset.
     """)
 
-# -------------------
-# DATA EXPLORATION
-# -------------------
 elif page == "Data Exploration":
     st.header("Dataset Overview")
     st.write("Shape:", df.shape)
@@ -49,26 +44,18 @@ elif page == "Data Exploration":
     if st.checkbox("Show missing values"):
         st.write(df.isnull().sum())
 
-# -------------------
-# VISUALISATIONS
-# -------------------
 elif page == "Visualisations":
     st.header("Data Visualisations")
 
-    # Histogram
     col = st.selectbox("Select column for histogram", df.columns[:-1])
     fig = px.histogram(df, x=col, color="Outcome", barmode="overlay")
     st.plotly_chart(fig)
 
-    # Scatter plot
     x_axis = st.selectbox("X-axis", df.columns[:-1])
     y_axis = st.selectbox("Y-axis", df.columns[:-1], index=1)
     fig2 = px.scatter(df, x=x_axis, y=y_axis, color="Outcome", symbol="Outcome")
     st.plotly_chart(fig2)
 
-# -------------------
-# PREDICT
-# -------------------
 elif page == "Predict":
     st.header("Make a Prediction")
 
@@ -92,9 +79,6 @@ elif page == "Predict":
         else:
             st.success(f"Prediction: No Diabetes (Confidence: {probability:.2f})")
 
-# -------------------
-# MODEL PERFORMANCE
-# -------------------
 elif page == "Model Performance":
     st.header("Model Performance")
     X = df.drop("Outcome", axis=1)
