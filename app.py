@@ -1,0 +1,114 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+import plotly.express as px
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Load model and scaler
+@st.cache_resource
+def load_model():
+    model = joblib.load("model.pkl")
+    scaler = joblib.load("scaler.pkl")
+    return model, scaler
+
+model, scaler = load_model()
+
+# Load dataset
+@st.cache_data
+def load_data():
+    return pd.read_csv("data/diabetes.csv")
+
+df = load_data()
+
+# Sidebar navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Home", "Data Exploration", "Visualisations", "Predict", "Model Performance"])
+
+# -------------------
+# HOME PAGE
+# -------------------
+if page == "Home":
+    st.title("Diabetes Prediction App")
+    st.markdown("""
+    This app predicts the likelihood of diabetes based on patient health data.
+    Dataset: Pima Indians Diabetes Dataset.
+    """)
+
+# -------------------
+# DATA EXPLORATION
+# -------------------
+elif page == "Data Exploration":
+    st.header("Dataset Overview")
+    st.write("Shape:", df.shape)
+    st.dataframe(df.head())
+
+    if st.checkbox("Show summary statistics"):
+        st.write(df.describe())
+
+    if st.checkbox("Show missing values"):
+        st.write(df.isnull().sum())
+
+# -------------------
+# VISUALISATIONS
+# -------------------
+elif page == "Visualisations":
+    st.header("Data Visualisations")
+
+    # Histogram
+    col = st.selectbox("Select column for histogram", df.columns[:-1])
+    fig = px.histogram(df, x=col, color="Outcome", barmode="overlay")
+    st.plotly_chart(fig)
+
+    # Scatter plot
+    x_axis = st.selectbox("X-axis", df.columns[:-1])
+    y_axis = st.selectbox("Y-axis", df.columns[:-1], index=1)
+    fig2 = px.scatter(df, x=x_axis, y=y_axis, color="Outcome", symbol="Outcome")
+    st.plotly_chart(fig2)
+
+# -------------------
+# PREDICT
+# -------------------
+elif page == "Predict":
+    st.header("Make a Prediction")
+
+    pregnancies = st.slider("Pregnancies", 0, 20, 1)
+    glucose = st.slider("Glucose", 0, 200, 100)
+    bp = st.slider("Blood Pressure", 0, 122, 70)
+    skin = st.slider("Skin Thickness", 0, 99, 20)
+    insulin = st.slider("Insulin", 0, 846, 79)
+    bmi = st.slider("BMI", 0.0, 67.0, 20.0)
+    dpf = st.slider("Diabetes Pedigree Function", 0.0, 2.5, 0.5)
+    age = st.slider("Age", 21, 81, 33)
+
+    features = np.array([[pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]])
+    scaled_features = scaler.transform(features)
+
+    if st.button("Predict"):
+        prediction = model.predict(scaled_features)[0]
+        probability = model.predict_proba(scaled_features)[0][prediction]
+        if prediction == 1:
+            st.error(f"Prediction: Diabetes (Confidence: {probability:.2f})")
+        else:
+            st.success(f"Prediction: No Diabetes (Confidence: {probability:.2f})")
+
+# -------------------
+# MODEL PERFORMANCE
+# -------------------
+elif page == "Model Performance":
+    st.header("Model Performance")
+    X = df.drop("Outcome", axis=1)
+    y = df["Outcome"]
+    X_scaled = scaler.transform(X)
+    preds = model.predict(X_scaled)
+
+    acc = accuracy_score(y, preds)
+    st.write(f"Accuracy: {acc:.4f}")
+
+    cm = confusion_matrix(y, preds)
+    st.write("Confusion Matrix:")
+    st.write(cm)
+
+    st.write("Classification Report:")
+    report = classification_report(y, preds, output_dict=True)
+    st.dataframe(pd.DataFrame(report).transpose())
